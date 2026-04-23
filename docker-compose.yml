@@ -1,39 +1,32 @@
+version: '3.8'
+
 services:
   api-ocr:
     build:
       context: .
       dockerfile: docker/Dockerfile
     container_name: api-ocr
-
     networks:
       - coolify
-
     env_file:
-      - path: .env
-        required: false
+      - .env
 
-    command: 'sh -c ".venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 ${APP_RELOAD:+--reload}"'
-
+    command: 'sh -c ".venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 $${APP_RELOAD:+--reload}"'
     restart: unless-stopped
-
     healthcheck:
-      test:
-        - CMD
-        - python
-        - '-c'
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.api.rule=PathPrefix(`/api`)
-      - traefik.http.routers.api.entrypoints=http
-      - traefik.http.middlewares.api-strip.stripprefix.prefixes=/api
-      - traefik.http.routers
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-ocr.rule=PathPrefix(`/apiocr`)"
+      - "traefik.http.routers.api-ocr.entrypoints=http"
+      - "traefik.http.routers.api-ocr.middlewares=api-ocr-strip"
+      - "traefik.http.middlewares.api-ocr-strip.stripprefix.prefixes=/apiocr"
+      - "traefik.http.services.api-ocr.loadbalancer.server.port=8000"
 
-  networks:
-    coolify:
-      external: true
+networks:
+  coolify:
+    external: true
